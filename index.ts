@@ -15,8 +15,5 @@ app.listen(port, () => {
   console.log("server is up and running on", port);
 });
 
-// const today = new Date().getDay() + 1;
-// console.log((today - 6 + 7) % 7);
-const arr = [1, 2, 3, 4];
-const red = arr.reduce((acc, cur) => acc + cur);
-console.log(red);
+const today = new Date("6:30");
+console.log(today);

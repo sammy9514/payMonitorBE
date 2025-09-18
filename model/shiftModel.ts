@@ -1,7 +1,7 @@
 import { model, Schema } from "mongoose";
 
 interface shiftSessionSchema {
-  dateworked: string;
+  dateworked: Date;
   hoursworked: number;
   start: string;
   finish: string;
@@ -15,7 +15,7 @@ interface shiftData extends shiftSessionSchema, Document {}
 const shiftModel = new Schema<shiftData>(
   {
     dateworked: {
-      type: String,
+      type: Date,
       required: true,
     },
     start: {

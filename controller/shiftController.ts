@@ -11,10 +11,10 @@ export const createShift = async (req: Request, res: Response) => {
     const [startHour, startMin] = start.split(":").map(Number);
     const [endHour, endMin] = finish.split(":").map(Number);
 
-    const startDate = new Date();
+    const startDate = new Date(date);
     startDate.setHours(startHour, startMin, 0);
 
-    const finishDate = new Date();
+    const finishDate = new Date(date);
     finishDate.setHours(endHour, endMin, 0);
 
     const msWorked = finishDate.getTime() - startDate.getTime();
@@ -24,7 +24,7 @@ export const createShift = async (req: Request, res: Response) => {
       hoursworked -= 1;
     }
 
-    console.log(hoursworked);
+    // console.log(hoursworked);
 
     const days = [
       "Sunday",
@@ -39,10 +39,10 @@ export const createShift = async (req: Request, res: Response) => {
     const day = days[getDay];
 
     const ratePerHour = day === "Sunday" || day === "Saturday" ? 13.98 : 12.86;
-    const amountEarned = (ratePerHour * hoursworked).toFixed(2);
+    const amountEarned = ratePerHour * hoursworked;
 
     const data = await shiftModel.create({
-      dateworked: formatDate,
+      dateworked: date,
       start,
       finish,
       hoursworked,
@@ -75,6 +75,20 @@ export const getAllShifts = async (req: Request, res: Response) => {
     console.log(error);
     res.status(400).json({
       message: "unable to find/get shift",
+    });
+  }
+};
+
+export const deleteShifts = async (req: Request, res: Response) => {
+  try {
+    await shiftModel.deleteMany();
+    res.status(200).json({
+      message: "deleted",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      message: "error",
     });
   }
 };
