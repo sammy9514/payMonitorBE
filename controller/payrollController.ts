@@ -67,10 +67,10 @@ export const getMultiplePayroll = async (req: Request, res: Response) => {
 
     //past weeks
     for (let i = pastWeeks; i >= 1; i--) {
-      const pastWeeks = new Date(currentDate);
-      pastWeeks.setDate(currentDate.getDate() - i * 7);
+      const pastWeek = new Date(currentDate);
+      pastWeek.setDate(currentDate.getDate() - i * 7);
 
-      const result = await createSinglePayDay(pastWeeks);
+      const result = await createSinglePayDay(pastWeek);
       results.push({
         week: `${i} week`,
         ...result,
@@ -85,7 +85,7 @@ export const getMultiplePayroll = async (req: Request, res: Response) => {
     });
 
     //future weeks
-    for (let i = 1; i < futureWeek; i++) {
+    for (let i = 1; i <= futureWeek; i++) {
       const futureWeek = new Date(currentDate);
       futureWeek.setDate(currentDate.getDate() + i * 7);
 
