@@ -3,7 +3,7 @@ import { model, Schema } from "mongoose";
 interface payrollSchema {
   startDate: Date;
   endDate: Date;
-  payday: Date;
+  payDay: Date;
   status: "paid" | "pending";
   totalAmount: number;
   shift: Types.ObjectId[];
@@ -21,7 +21,7 @@ const payrolllModel = new Schema<payrollData>(
       type: Date,
       required: true,
     },
-    payday: {
+    payDay: {
       type: Date,
       required: true,
     },

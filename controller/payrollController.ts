@@ -2,53 +2,115 @@ import { Request, Response } from "express";
 import payrollModel from "../model/payrollModel";
 import shiftModel from "../model/shiftModel";
 
-export const createPayroll = async (req: Request, res: Response) => {
+const getWeekStart = (date: Date) => {
+  const day = date.getDay();
+  const diifToSaturday = (day + 1) % 7;
+  const startWeek = new Date(date);
+  startWeek.setDate(date.getDate() - diifToSaturday);
+  return startWeek;
+};
+
+const getWeekEnd = (startDate: Date) => {
+  const endWeek = new Date(startDate);
+  endWeek.setDate(startDate.getDate() + 6);
+  return endWeek;
+};
+
+const getPayDay = (endDate: Date) => {
+  const payDay = new Date(endDate);
+  payDay.setDate(endDate.getDate() + 14);
+  return payDay;
+};
+
+const createSinglePayDay = async (weekStartDate: Date) => {
   try {
-    // const {startDate, endDate} = req.body()
-    const date = new Date();
-    const day = date.getDay();
-    const diffToSaturday = (day + 1) % 7;
-    const startDate = new Date(date);
-    startDate.setDate(date.getDate() - diffToSaturday);
-    // const formatStartDate = startDate
-    //   .toLocaleDateString("en-GB")
-    //   .replace(/\//g, "-");
+    const startDate = getWeekStart(weekStartDate);
+    const endDate = getWeekEnd(startDate);
+    const payDay = getPayDay(endDate);
 
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    // const formatEndDate = endDate
-    //   .toLocaleDateString("en-GB")
-    //   .replace(/\//g, "-");
+    const checkPayday = await payrollModel.findOne({
+      startDate: startDate,
+      endDate: endDate,
+    });
 
-    const payday = new Date(endDate);
-    payday.setDate(endDate.getDate() + 14);
-    // const formatPayday = payday.toLocaleDateString().replace(/\//g, "-");
+    if (checkPayday) {
+      return { message: "payroll found", data: checkPayday };
+    }
 
     const shifts = await shiftModel.find({
       dateworked: { $gte: startDate, $lte: endDate },
     });
+
     const totalAmount = shifts.reduce(
       (sum, shift) => sum + shift.amountEarned,
       0
     );
-    console.log(shifts, totalAmount);
 
     const payrollData = await payrollModel.create({
       startDate,
       endDate,
-      payday,
+      payDay,
       totalAmount,
     });
 
-    res.status(201).json({
-      message: "payroll created",
-      data: payrollData,
-    });
+    return { payrollData: payrollData };
   } catch (error) {
     console.log(error);
-    res.status(400).json({
-      message: "failed to create payroll",
+  }
+};
+
+export const getMultiplePayroll = async (req: Request, res: Response) => {
+  try {
+    const { pastWeeks, futureWeek } = req.body;
+    const currentDate = new Date();
+    const results: Array<{}> = [];
+
+    //past weeks
+    for (let i = pastWeeks; i >= 1; i--) {
+      const pastWeeks = new Date(currentDate);
+      pastWeeks.setDate(currentDate.getDate() - i * 7);
+
+      const result = await createSinglePayDay(pastWeeks);
+      results.push({
+        week: `${i} week`,
+        ...result,
+      });
+    }
+
+    //current week
+    const result = await createSinglePayDay(currentDate);
+    results.push({
+      week: "current week",
+      ...result,
     });
+
+    //future weeks
+    for (let i = 1; i < futureWeek; i++) {
+      const futureWeek = new Date(currentDate);
+      futureWeek.setDate(currentDate.getDate() + i * 7);
+
+      const result = await createSinglePayDay(futureWeek);
+      results.push({
+        week: `${i} week future`,
+        ...result,
+      });
+    }
+
+    const newPayroll = results.filter((r: any) => r !== r.existing);
+    const existing = results.filter((r: any) => r === r.existing);
+
+    res.status(201).json({
+      message: "payroll created",
+      summary: {
+        total: results.length,
+        created: newPayroll.length,
+        existing: existing.length,
+      },
+      data: results,
+    });
+    console.log(results);
+  } catch (error) {
+    console.log(error);
   }
 };
 

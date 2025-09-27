@@ -14,6 +14,3 @@ dbConfig();
 app.listen(port, () => {
   console.log("server is up and running on", port);
 });
-
-const today = new Date("6:30");
-console.log(today);
