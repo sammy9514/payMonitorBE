@@ -1,12 +1,26 @@
 import { Request, Response } from "express";
 import shiftModel from "../model/shiftModel";
+import { createSinglePayDay } from "./payrollController";
 
 export const createShift = async (req: Request, res: Response) => {
   try {
-    let { dateworked, start, finish, break: hasbreak } = req.body;
+    let { dateworked, start, finish, break: hasbreak, ratePerHour } = req.body;
     const date = new Date(dateworked);
+
+    console.log(date);
     const formatDate = date.toLocaleDateString("en-GB").replace(/\//g, "-");
     const getDay = date.getDay();
+
+    const existingShift = await shiftModel.findOne({
+      dateworked: date,
+    });
+
+    if (existingShift) {
+      return res.status(409).json({
+        message: "A shift already exists for this date",
+        existingShift,
+      });
+    }
 
     const [startHour, startMin] = start.split(":").map(Number);
     const [endHour, endMin] = finish.split(":").map(Number);
@@ -20,7 +34,7 @@ export const createShift = async (req: Request, res: Response) => {
     const msWorked = finishDate.getTime() - startDate.getTime();
     let hoursworked = msWorked / (1000 * 60 * 60);
 
-    if (hasbreak) {
+    if (hasbreak === "Unpaid Break") {
       hoursworked -= 1;
     }
 
@@ -38,7 +52,7 @@ export const createShift = async (req: Request, res: Response) => {
 
     const day = days[getDay];
 
-    const ratePerHour = day === "Sunday" || day === "Saturday" ? 13.98 : 12.86;
+    // const ratePerHourr = day === "Sunday" || day === "Saturday" ? 13.98 : 12.86;
     const amountEarned = ratePerHour * hoursworked;
 
     const data = await shiftModel.create({
@@ -50,10 +64,12 @@ export const createShift = async (req: Request, res: Response) => {
       ratePerHour,
       amountEarned,
     });
+    const payroll = await createSinglePayDay(date);
 
     res.status(201).json({
       message: "shift created",
       data,
+      payroll: payroll,
     });
   } catch (error) {
     console.log(error);

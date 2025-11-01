@@ -3,10 +3,12 @@ import payrollModel from "../model/payrollModel";
 import shiftModel from "../model/shiftModel";
 
 const getWeekStart = (date: Date) => {
-  const day = date.getDay();
-  const diifToSaturday = (day + 1) % 7;
+  const localDate = new Date(date);
+  const day = localDate.getDay();
+
+  const dayToSaturday = (day + 1) % 7;
   const startWeek = new Date(date);
-  startWeek.setDate(date.getDate() - diifToSaturday);
+  startWeek.setDate(localDate.getDate() - dayToSaturday);
   return startWeek;
 };
 
@@ -22,20 +24,11 @@ const getPayDay = (endDate: Date) => {
   return payDay;
 };
 
-const createSinglePayDay = async (weekStartDate: Date) => {
+export const createSinglePayDay = async (weekStartDate: Date) => {
   try {
     const startDate = getWeekStart(weekStartDate);
     const endDate = getWeekEnd(startDate);
     const payDay = getPayDay(endDate);
-
-    const checkPayday = await payrollModel.findOne({
-      startDate: startDate,
-      endDate: endDate,
-    });
-
-    if (checkPayday) {
-      return { message: "payroll found", data: checkPayday };
-    }
 
     const shifts = await shiftModel.find({
       dateworked: { $gte: startDate, $lte: endDate },
@@ -46,11 +39,33 @@ const createSinglePayDay = async (weekStartDate: Date) => {
       0
     );
 
+    const shiftId = shifts.map((shift) => shift._id);
+
+    const checkPayday = await payrollModel.findOne({
+      startDate: startDate,
+      endDate: endDate,
+    });
+    console.log(startDate, "startdate");
+
+    if (checkPayday) {
+      checkPayday.totalAmount = totalAmount;
+      checkPayday.shift = shiftId;
+      await checkPayday.save();
+      return { message: "payroll found", data: checkPayday };
+    }
+
+    console.log(
+      "start",
+      startDate
+      // shiftId.map((shift) => shift)
+    );
+
     const payrollData = await payrollModel.create({
       startDate,
       endDate,
       payDay,
       totalAmount,
+      shift: shiftId,
     });
 
     return { payrollData: payrollData };
@@ -59,7 +74,7 @@ const createSinglePayDay = async (weekStartDate: Date) => {
   }
 };
 
-export const getMultiplePayroll = async (req: Request, res: Response) => {
+export const createMultiplePayroll = async (req: Request, res: Response) => {
   try {
     const { pastWeeks, futureWeek } = req.body;
     const currentDate = new Date();
@@ -96,15 +111,10 @@ export const getMultiplePayroll = async (req: Request, res: Response) => {
       });
     }
 
-    const newPayroll = results.filter((r: any) => r !== r.existing);
-    const existing = results.filter((r: any) => r === r.existing);
-
     res.status(201).json({
       message: "payroll created",
       summary: {
         total: results.length,
-        created: newPayroll.length,
-        existing: existing.length,
       },
       data: results,
     });
@@ -114,16 +124,35 @@ export const getMultiplePayroll = async (req: Request, res: Response) => {
   }
 };
 
-// export const deletePayroll = async (req:Request, res:Response)=>{
-//   try {
-//     await payrollModel.deleteMany()
-//     res.status(200).json({
-//       message: "deleted"
-//     })
-//   } catch (error) {
-//     console.log(error);
-//     res.status(400).json({
-//       message: "error",
-//     });
-//   }
-// }
+export const getMultiplePayoll = async (req: Request, res: Response) => {
+  try {
+    const data = await payrollModel
+      .find()
+      .populate("shift")
+      .sort({ startDate: 1 });
+
+    res.status(200).json({
+      message: "success",
+      data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      message: "error",
+    });
+  }
+};
+
+export const deletePayroll = async (req: Request, res: Response) => {
+  try {
+    await payrollModel.deleteMany();
+    res.status(200).json({
+      message: "deleted",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(400).json({
+      message: "error",
+    });
+  }
+};

@@ -5,7 +5,7 @@ interface shiftSessionSchema {
   hoursworked: number;
   start: string;
   finish: string;
-  break: boolean;
+  break: string;
   ratePerHour: number;
   amountEarned: number;
 }
@@ -31,13 +31,11 @@ const shiftModel = new Schema<shiftData>(
     },
     ratePerHour: {
       type: Number,
-      enum: [12.86, 13.98],
-      default: 12.86,
       required: true,
     },
     break: {
-      type: Boolean,
-      default: false,
+      type: String,
+      // default: "Unpaid break",
     },
     amountEarned: {
       type: Number,
