@@ -111,8 +111,10 @@ const getMultiplePayoll = async (req, res) => {
     try {
         const data = await payrollModel_1.default
             .find()
+            .sort({ startDate: 1 })
+            .limit(10)
             .populate("shift")
-            .sort({ startDate: 1 });
+            .lean();
         res.status(200).json({
             message: "success",
             data,
@@ -126,6 +128,8 @@ const getMultiplePayoll = async (req, res) => {
     }
 };
 exports.getMultiplePayoll = getMultiplePayoll;
+console.time("getMultiplePayoll");
+console.timeEnd("getMultiplePayoll");
 const deletePayroll = async (req, res) => {
     try {
         await payrollModel_1.default.deleteMany();
